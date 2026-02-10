@@ -7,17 +7,22 @@ const Register = () => {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
+    // This looks at the "name" attribute of the input to update the state
     setInputs(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Sends data to your Backend Route
       await axios.post("http://localhost:5000/api/auth/register", inputs);
       alert("Registration Successful! Please Login.");
       navigate("/login");
     } catch (err) {
-      console.log(err);
+      // Fixed: Now shows the actual error message from the server (e.g., "Email already registered")
+      const errorMsg = err.response?.data || "Something went wrong!";
+      alert(errorMsg); 
+      console.log("Error details:", err.response?.data);
     }
   };
 
@@ -26,9 +31,29 @@ const Register = () => {
       <div style={styles.card}>
         <h2 style={styles.title}>SIGN UP</h2>
         <form onSubmit={handleSubmit} style={styles.form}>
-          <input required name="username" placeholder="Username" onChange={handleChange} style={styles.input}/>
-          <input required name="email" type="email" placeholder="E-mail" onChange={handleChange} style={styles.input}/>
-          <input required name="password" type="password" placeholder="Password" onChange={handleChange} style={styles.input}/>
+          <input 
+            required 
+            name="username" // Matches the key in state
+            placeholder="Username" 
+            onChange={handleChange} 
+            style={styles.input}
+          />
+          <input 
+            required 
+            name="email" // Matches the key in state
+            type="email" 
+            placeholder="E-mail" 
+            onChange={handleChange} 
+            style={styles.input}
+          />
+          <input 
+            required 
+            name="password" // Matches the key in state
+            type="password" 
+            placeholder="Password" 
+            onChange={handleChange} 
+            style={styles.input}
+          />
           
           <select name="role" onChange={handleChange} style={styles.input}>
             <option value="student">I am a Student</option>
@@ -43,7 +68,6 @@ const Register = () => {
   );
 };
 
-// Quick CSS to match your image reference
 const styles = {
   container: { backgroundColor: '#5dade2', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'Arial' },
   card: { backgroundColor: '#ebf5fb', padding: '40px', borderRadius: '20px', width: '350px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' },

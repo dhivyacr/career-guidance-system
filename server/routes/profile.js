@@ -2,8 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Profile = require('../models/Profile');
 
-// 1. Mock Career Database
-// This acts as the "Benchmark" the system uses to compare student skills.
 const careerData = [
   { jobRole: "Frontend Developer", requiredSkills: ["React", "JavaScript", "CSS", "HTML"] },
   { jobRole: "Backend Developer", requiredSkills: ["Node.js", "Express", "MongoDB", "JavaScript"] },
@@ -11,21 +9,27 @@ const careerData = [
   { jobRole: "Cloud Engineer", requiredSkills: ["AWS", "Docker", "Kubernetes", "Linux"] }
 ];
 
-// 2. CREATE OR UPDATE PROFILE + GENERATE RECOMMENDATIONS
-// This route calculates the match percentage and identifies missing skills.
 router.post('/', async (req, res) => {
   try {
     const { userId, academicDetails, skills, interests } = req.body;
 
-    // Logic: Calculate Recommendations and Skill Gaps
+    // --- FIX STARTS HERE: NORMALIZE USER SKILLS ---
+    // Convert user input array to lowercase and trim spaces
+    const normalizedUserSkills = skills.map(s => s.toLowerCase().trim());
+
     const recommendations = careerData.map(career => {
-      // Find skills the student has that match this career
-      const matchedSkills = career.requiredSkills.filter(skill => skills.includes(skill));
+      // Normalize career database skills for comparison
+      const normalizedRequiredSkills = career.requiredSkills.map(s => s.toLowerCase().trim());
+
+      // Find matches using normalized (lowercase) strings
+      const matchedSkills = career.requiredSkills.filter(skill => 
+        normalizedUserSkills.includes(skill.toLowerCase().trim())
+      );
       
-      // Find skills the student is missing
-      const missingSkills = career.requiredSkills.filter(skill => !skills.includes(skill));
+      const missingSkills = career.requiredSkills.filter(skill => 
+        !normalizedUserSkills.includes(skill.toLowerCase().trim())
+      );
       
-      // Calculate match percentage
       const matchPercentage = (matchedSkills.length / career.requiredSkills.length) * 100;
 
       return {
@@ -33,18 +37,17 @@ router.post('/', async (req, res) => {
         matchPercentage,
         missingSkills
       };
-    }).sort((a, b) => b.matchPercentage - a.matchPercentage); // Rank by best match
+    }).sort((a, b) => b.matchPercentage - a.matchPercentage);
+    // --- FIX ENDS HERE ---
 
-    // Save/Update Profile with Results in MongoDB
     const profile = await Profile.findOneAndUpdate(
       { user: userId },
       { 
         $set: { 
           academicDetails, 
-          skills, 
+          skills, // We still save the original casing for display
           interests,
           recommendations, 
-          // If the top match is >= 75%, mark as Placement Ready for the Advisor
           placementReady: recommendations[0]?.matchPercentage >= 75 
         } 
       },
@@ -58,8 +61,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// 3. GET PROFILE BY USER ID
-// Used by the Student Dashboard to display their recommendations.
+// ... rest of your routes (GET /:userId and GET /admin/all) remain the same
 router.get('/:userId', async (req, res) => {
   try {
     const profile = await Profile.findOne({ user: req.params.userId });
@@ -70,8 +72,6 @@ router.get('/:userId', async (req, res) => {
   }
 });
 
-// 4. GET ALL PROFILES
-// Used by the Placement Advisor to monitor all students.
 router.get('/admin/all', async (req, res) => {
   try {
     const profiles = await Profile.find().populate('user', 'username email');
